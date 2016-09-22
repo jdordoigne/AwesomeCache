@@ -85,7 +85,7 @@ open class Cache<T: NSCoding> {
     ///                         The supplied success or failure blocks must be called upon completion.
     ///                         If the error block is called, the object is not cached and the completion block is invoked with this error.
     /// - parameter completion: Called as soon as a cached object is available to use. The second parameter is true if the object was already cached.
-    open func setObject(forKey key: String, cacheBlock: (CacheBlockClosure, ErrorClosure) -> Void, completion: @escaping (T?, Bool, NSError?) -> Void) {
+    open func setObject(forKey key: String, cacheBlock: (@escaping CacheBlockClosure, @escaping ErrorClosure) -> Void, completion: @escaping (T?, Bool, NSError?) -> Void) {
         if let object = object(forKey: key) {
             completion(object, true, nil)
         } else {
@@ -275,6 +275,46 @@ open class Cache<T: NSCoding> {
             return Date().addingTimeInterval(seconds)
         case .date(let date):
             return date
+        }
+    }
+    
+    //MARK: -- Calculate Disk Cache Size
+    /**
+       Calculate disk cache size
+        - parameter completionHandler: Calculate complete then callback
+    */
+    public func calculateDiskCacheSizeWithCompletionHandler(completionHandler: ((_ size: UInt) -> ())?) {
+        DispatchQueue.global().async {
+            let diskCacheURL = self.cacheDirectory
+            
+            let resourceKeys = [URLResourceKey.isDirectoryKey, URLResourceKey.totalFileAllocatedSizeKey]
+            var diskCacheSize: UInt = 0
+            
+            if let fileEnumerator = self.fileManager.enumerator(at: diskCacheURL, includingPropertiesForKeys: resourceKeys, options: FileManager.DirectoryEnumerationOptions.skipsHiddenFiles, errorHandler: nil),
+                let urls = fileEnumerator.allObjects as? [NSURL] {
+                for fileURL in urls {
+                    do {
+                        let resourceValues = try fileURL.resourceValues(forKeys: resourceKeys)
+                        // If it is a Directory. Continue to next file URL.
+                        if let isDirectory = (resourceValues[URLResourceKey.isDirectoryKey] as AnyObject).boolValue {
+                            if isDirectory {
+                                continue
+                            }
+                        }
+                        
+                        if let fileSize = resourceValues[URLResourceKey.totalFileAllocatedSizeKey] as? NSNumber {
+                            diskCacheSize += fileSize.uintValue
+                        }
+                    } catch _ {
+                    }
+                    
+                }
+            }
+            DispatchQueue.main.async {
+                if let completionHandler = completionHandler {
+                    completionHandler(diskCacheSize)
+                }
+            }
         }
     }
 }

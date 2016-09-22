@@ -26,6 +26,11 @@ class ViewController: UIViewController {
     
     @IBAction func saveInCache(_ sender: AnyObject?) {
         cache["myText"] = textView.text as NSString?
+        
+        cache.calculateDiskCacheSizeWithCompletionHandler { (size) -> () in
+            let kSize = String(format: "%d", size)
+            print(kSize)
+        }
     }
 }
 
