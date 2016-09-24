@@ -58,6 +58,17 @@ open class Cache<T: NSCoding> {
             try fileManager.setAttributes(protection, ofItemAtPath: cacheDirectory.path)
         }
     }
+    
+    public convenience init(name: String, applicationGroupIdentifier: String, fileProtection: String? = nil) throws {
+        if let outputURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: applicationGroupIdentifier) {
+            let libraryUrl = outputURL.appendingPathComponent("Library", isDirectory: true)
+            let cachesUrl = libraryUrl.appendingPathComponent("Caches", isDirectory: true)
+            
+            try self.init(name: name, directory: cachesUrl, fileProtection: fileProtection)
+        } else {
+            try self.init(name: name, directory: nil, fileProtection: fileProtection)
+        }
+    }
 
     /// Convenience Initializer
     ///
